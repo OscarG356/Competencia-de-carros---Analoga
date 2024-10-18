@@ -1,5 +1,14 @@
 #include <Bluepad32.h>
-#include <AFMotor.h>
+
+// Pines para control de Motores
+#define EnA 2 //Enable A (PWM)
+#define In1 3 //Input 1
+#define In2 4 //Input 2
+#define In3 5 //Input 3
+#define In4 6 //Input 4
+#define EnB 7 //Enable B (PWM)
+
+int Vel;
 
 ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
@@ -231,6 +240,7 @@ void processControllers() {
         if (myController && myController->isConnected() && myController->hasData()) {
             if (myController->isGamepad()) {
                 processGamepad(myController);
+                Motor_controller(myController);
             } else if (myController->isMouse()) {
                 processMouse(myController);
             } else if (myController->isKeyboard()) {
@@ -244,61 +254,69 @@ void processControllers() {
     }
 }
 
-//Function for Motor Controller
+//Funciones para control de motores
 
-void MotorController ()
-
-AF_DCMotor motor(4);
-
-void setup() 
-{
-	//Set initial speed of the motor & stop
-	motor.setSpeed(200);
-	motor.run(RELEASE);
+void Motor_controller (ControllerPtr ctl){
+  if(ctl->throttle() > 10 && ctl->brake()>10){
+    digitalWrite(In1,LOW);
+    digitalWrite(In2,LOW);
+    digitalWrite(In3,LOW);
+    digitalWrite(In4,LOW);
+    analogWrite(EnA,0);
+    analogWrite(EnB,0);
+    Serial.println("Decidete primero");
+  }
+  else if(ctl->throttle() > 10){
+    Vel = map(ctl->throttle(),0,1023,0,255);
+    digitalWrite(In1,HIGH);
+    digitalWrite(In2,LOW);
+    digitalWrite(In3,HIGH);
+    digitalWrite(In4,LOW);
+    analogWrite(EnA,Vel);
+    analogWrite(EnB,Vel);
+    Serial.println("Pa lante como el caminante");
+  }
+  else if (ctl->axisX() > 10){
+    Vel = map(ctl->axisX(),-511,511,0,255);
+    digitalWrite(In1,LOW);
+    digitalWrite(In2,HIGH);
+    digitalWrite(In3,HIGH);
+    digitalWrite(In4,LOW);
+    analogWrite(EnA,Vel);
+    analogWrite(EnB,Vel);
+    Serial.println("Derecha como Uribe");
+  }
+  else if(ctl->axisX() < -10){
+    Vel = map(ctl->axisX(),-511,511,0,255);
+    digitalWrite(In1,HIGH);
+    digitalWrite(In2,LOW);
+    digitalWrite(In3,LOW);
+    digitalWrite(In4,HIGH);
+    analogWrite(EnA,Vel);
+    analogWrite(EnB,Vel);
+    Serial.println("Izquierda ni pal putas");
+  }
+  else if(ctl->brake() > 10){
+    Vel = map(ctl->throttle(),0,1023,0,255);
+    digitalWrite(In1,LOW);
+    digitalWrite(In2,HIGH);
+    digitalWrite(In3,LOW);
+    digitalWrite(In4,HIGH);
+    analogWrite(EnA,Vel);
+    analogWrite(EnB,Vel);
+    Serial.println("Pa atras como el forro de la mondá");
+  }
+  else{
+    digitalWrite(In1,LOW);
+    digitalWrite(In2,LOW);
+    digitalWrite(In3,LOW);
+    digitalWrite(In4,LOW);
+    analogWrite(EnA,0);
+    analogWrite(EnB,0);
+    Serial.println("Firme");
+  }
 }
 
-void loop() 
-{
-	uint8_t i;
-
-	// Turn on motor
-	motor.run(FORWARD);
-	
-	// Accelerate from zero to maximum speed
-	for (i=0; i<255; i++) 
-	{
-		motor.setSpeed(i);  
-		delay(10);
-	}
-	
-	// Decelerate from maximum speed to zero
-	for (i=255; i!=0; i--) 
-	{
-		motor.setSpeed(i);  
-		delay(10);
-	}
-
-	// Now change motor direction
-	motor.run(BACKWARD);
-	
-	// Accelerate from zero to maximum speed
-	for (i=0; i<255; i++) 
-	{
-		motor.setSpeed(i);  
-		delay(10);
-	}
-
-	// Decelerate from maximum speed to zero
-	for (i=255; i!=0; i--) 
-	{
-		motor.setSpeed(i);  
-		delay(10);
-	}
-
-	// Now turn off motor
-	motor.run(RELEASE);
-	delay(1000);
-}
 
 //***************************************************************************************************************************
 // Arduino setup function. Runs in CPU 1
@@ -324,6 +342,26 @@ void setup() {
     // - Second one, which is a "virtual device", is a mouse.
     // By default, it is disabled.
     BP32.enableVirtualDevice(false);
+
+    //Motores
+    pinMode(In1, OUTPUT);
+    pinMode(In2, OUTPUT);
+    pinMode(EnA, OUTPUT);
+    pinMode(In3, OUTPUT);
+    pinMode(In4, OUTPUT);
+    pinMode(EnB, OUTPUT);
+
+    // Iniciar ambos motores detenidos
+    digitalWrite(In1, LOW);
+    digitalWrite(In2, LOW);
+    analogWrite(EnA, 0);  // Velocidad 0
+
+    digitalWrite(In3, LOW);
+    digitalWrite(In4, LOW);
+    analogWrite(EnB, 0);  // Velocidad 0
+
+    // Mensaje de inicio en la terminal
+    Serial.println("Iniciando control de motores...");
 }
 
 //Code For 
