@@ -1,14 +1,17 @@
 #include <Bluepad32.h>
 
 // Pines para control de Motores
-#define EnA 2 //Enable A (PWM)
-#define In1 3 //Input 1
-#define In2 4 //Input 2
-#define In3 5 //Input 3
-#define In4 6 //Input 4
-#define EnB 7 //Enable B (PWM)
-
-int Vel;
+#define EnA 23 //Enable A (PWM)
+#define In1 22 //Input 1
+#define In2 19  //Input 2
+#define In3 18 //Input 3
+#define In4 17 //Input 4
+#define EnB 16 //Enable B (PWM)
+#define FCA 1 //Factor de reducción Motor A
+#define FCB 1 //Factor de reducción Motor B
+ 
+int Vel; //Velocidad de los motores
+int ControllerID = 0; //Rechaza otros controles
 
 ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
@@ -16,18 +19,21 @@ ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 // Up to 4 gamepads can be connected at the same time.
 void onConnectedController(ControllerPtr ctl) {
     bool foundEmptySlot = false;
-    for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
-        if (myControllers[i] == nullptr) {
-            Serial.printf("CALLBACK: Controller is connected, index=%d\n", i);
-            // Additionally, you can get certain gamepad properties like:
-            // Model, VID, PID, BTAddr, flags, etc.
-            ControllerProperties properties = ctl->getProperties();
-            Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName().c_str(), properties.vendor_id,
-                           properties.product_id);
-            myControllers[i] = ctl;
-            foundEmptySlot = true;
-            break;
-        }
+    if(ControllerID == 0) {
+      for (int i = 0; i < BP32_MAX_GAMEPADS; i++) {
+          if (myControllers[i] == nullptr) {
+              Serial.printf("CALLBACK: Controller is connected, index=%d\n", i);
+              // Additionally, you can get certain gamepad properties like:
+              // Model, VID, PID, BTAddr, flags, etc.
+              ControllerProperties properties = ctl->getProperties();
+              Serial.printf("Controller model: %s, VID=0x%04x, PID=0x%04x\n", ctl->getModelName().c_str(), properties.vendor_id,
+                            properties.product_id);
+              myControllers[i] = ctl;
+              foundEmptySlot = true;
+              ControllerID++;
+              break;
+          }
+      }
     }
     if (!foundEmptySlot) {
         Serial.println("CALLBACK: Controller connected, but could not found empty slot");
@@ -42,6 +48,7 @@ void onDisconnectedController(ControllerPtr ctl) {
             Serial.printf("CALLBACK: Controller disconnected from index=%d\n", i);
             myControllers[i] = nullptr;
             foundController = true;
+            ControllerID--;
             break;
         }
     }
@@ -254,7 +261,7 @@ void processControllers() {
     }
 }
 
-//Funciones para control de motores
+// Funciones para control de motores ******************************************************
 
 void Motor_controller (ControllerPtr ctl){
   if(ctl->throttle() > 10 && ctl->brake()>10){
@@ -272,38 +279,38 @@ void Motor_controller (ControllerPtr ctl){
     digitalWrite(In2,LOW);
     digitalWrite(In3,HIGH);
     digitalWrite(In4,LOW);
-    analogWrite(EnA,Vel);
-    analogWrite(EnB,Vel);
+    analogWrite(EnA,Vel*FCA);
+    analogWrite(EnB,Vel*FCB);
     Serial.println("Pa lante como el caminante");
   }
-  else if (ctl->axisX() > 10){
+  else if (ctl->axisX() > 20){
     Vel = map(ctl->axisX(),-511,511,0,255);
     digitalWrite(In1,LOW);
     digitalWrite(In2,HIGH);
     digitalWrite(In3,HIGH);
     digitalWrite(In4,LOW);
-    analogWrite(EnA,Vel);
-    analogWrite(EnB,Vel);
+    analogWrite(EnA,Vel*FCA);
+    analogWrite(EnB,Vel*FCB);
     Serial.println("Derecha como Uribe");
   }
-  else if(ctl->axisX() < -10){
+  else if(ctl->axisX() < -20){
     Vel = map(ctl->axisX(),-511,511,0,255);
     digitalWrite(In1,HIGH);
     digitalWrite(In2,LOW);
     digitalWrite(In3,LOW);
     digitalWrite(In4,HIGH);
-    analogWrite(EnA,Vel);
-    analogWrite(EnB,Vel);
+    analogWrite(EnA,Vel*FCA);
+    analogWrite(EnB,Vel*FCB);
     Serial.println("Izquierda ni pal putas");
   }
   else if(ctl->brake() > 10){
-    Vel = map(ctl->throttle(),0,1023,0,255);
+    Vel = map(ctl->brake(),0,1023,0,255);
     digitalWrite(In1,LOW);
     digitalWrite(In2,HIGH);
     digitalWrite(In3,LOW);
     digitalWrite(In4,HIGH);
-    analogWrite(EnA,Vel);
-    analogWrite(EnB,Vel);
+    analogWrite(EnA,Vel*FCA);
+    analogWrite(EnB,Vel*FCB);
     Serial.println("Pa atras como el forro de la mondá");
   }
   else{
@@ -317,11 +324,10 @@ void Motor_controller (ControllerPtr ctl){
   }
 }
 
-
-//***************************************************************************************************************************
 // Arduino setup function. Runs in CPU 1
 void setup() {
     Serial.begin(115200);
+
     Serial.printf("Firmware: %s\n", BP32.firmwareVersion());
     const uint8_t* addr = BP32.localBdAddress();
     Serial.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
@@ -363,8 +369,6 @@ void setup() {
     // Mensaje de inicio en la terminal
     Serial.println("Iniciando control de motores...");
 }
-
-//Code For 
 
 // Arduino loop function. Runs in CPU 1.
 void loop() {

@@ -1,9 +1,9 @@
 // Definir los pines de los sensores de línea
-#define SENSOR_1_PIN  35  // Pin analógico para sensor 1
-#define SENSOR_2_PIN  36  // Pin analógico para sensor 2
-#define SENSOR_3_PIN  37  // Pin analógico para sensor 3
-#define SENSOR_4_PIN  38  // Pin analógico para sensor 4
-#define SENSOR_5_PIN  39  // Pin analógico para sensor 5
+#define SENSOR_1_PIN  1  // Pin analógico para sensor 1
+#define SENSOR_2_PIN  2  // Pin analógico para sensor 2
+#define SENSOR_3_PIN  42  // Pin analógico para sensor 3
+#define SENSOR_4_PIN  41  // Pin analógico para sensor 4
+#define SENSOR_5_PIN  40  // Pin analógico para sensor 5
 
 // Definir los umbrales para cada sensor
 #define THRESHOLD  500  // Ajusta este valor según la sensibilidad de tu sensor
